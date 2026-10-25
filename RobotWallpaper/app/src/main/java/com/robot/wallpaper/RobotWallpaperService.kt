@@ -36,13 +36,13 @@ class RobotWallpaperService : WallpaperService() {
 
         // ---------- Reglages ----------
         private val COLOR = Color.parseColor("#50C878")  // vert emeraude
-        private val BLINK_EVERY_MS = 3_000L  // clignement toutes les 5 secondes
+        private val BLINK_EVERY_MS = 5_000L  // clignement toutes les 5 secondes
         private val BLINK_MS = 200L          // duree d'un clignement
         private val NOTIF_MS = 4_000L        // duree du regard vers le haut
         private val CIRCLE_EVERY_MS = 1_000L // un tour de cercle toutes les secondes
-        private val CIRCLE_MS = 700L         // duree d'un tour
-        private val CIRCLE_SIZE = 0.8f       // taille du cercle (0 a 1)
-        private val PUPIL_SIZE = 0.20f       // taille de la pupille
+        private val CIRCLE_MS = 900L         // duree d'un tour
+        private val CIRCLE_SIZE = 1.0f       // taille du cercle (1 = le plus grand possible)
+        private val PUPIL_SIZE = 0.17f       // taille de la pupille
         private val EYE_WIDTH = 0.22f        // largeur d'un oeil (part de l'ecran)
         private val EYE_RATIO = 1.25f        // hauteur / largeur de l'oeil
         // --------------------------------
@@ -127,7 +127,7 @@ class RobotWallpaperService : WallpaperService() {
             val notifMode = (now - notifStart) in 0L until NOTIF_MS
 
             // Regard de base : leger balayage au repos, vers le haut pour une notification
-            val drift = sin((now % 100_000L) / 2300f) * 0.12f
+            val drift = sin((now % 100_000L) / 2300f) * 0.08f
             val tgx = if (notifMode) 0f else drift
             val tgy = if (notifMode) -0.85f else 0f
             gazeX += (tgx - gazeX) * k
@@ -141,16 +141,18 @@ class RobotWallpaperService : WallpaperService() {
             val cy = h * 0.5f
             val pupilR = eyeW * PUPIL_SIZE
 
-            // Tour de cercle toutes les secondes (en pixels, donc un vrai cercle)
-            val maxX = (eyeW / 2f - pupilR) * 0.75f
-            val maxY = (fullH / 2f - pupilR) * 0.80f
+            // Deplacement maximal de la pupille dans l'oeil (en pixels)
+            val maxX = (eyeW / 2f - pupilR) * 0.9f
+            val maxY = (fullH / 2f - pupilR) * 0.9f
+
+            // Tour de cercle toutes les secondes
             val circleR = min(maxX, maxY) * CIRCLE_SIZE
             var cirX = 0f
             var cirY = 0f
             val t1 = now % CIRCLE_EVERY_MS
             if (!notifMode && t1 < CIRCLE_MS) {
                 val p = t1.toFloat() / CIRCLE_MS
-                val env = smooth(min(p / 0.15f, (1f - p) / 0.15f)) * o
+                val env = smooth(min(p / 0.10f, (1f - p) / 0.10f)) * o
                 val a = p * 2f * PI.toFloat() - PI.toFloat() / 2f
                 cirX = cos(a) * circleR * env
                 cirY = sin(a) * circleR * env
