@@ -37,11 +37,11 @@ class RobotWallpaperService : WallpaperService() {
         // ---------- Reglages ----------
         private val COLOR = Color.parseColor("#50C878")  // vert emeraude
         private val BLINK_EVERY_MS = 5_000L  // clignement toutes les 5 secondes
-        private val BLINK_MS = 200L          // duree d'un clignement
+        private val BLINK_MS = 1.500L          // duree d'un clignement
         private val NOTIF_MS = 4_000L        // duree du regard vers le haut
-        private val CIRCLE_EVERY_MS = 1_000L // un tour de cercle toutes les secondes
+        private val CIRCLE_EVERY_MS = 2_000L // un tour de cercle toutes les secondes
         private val CIRCLE_MS = 900L         // duree d'un tour
-        private val CIRCLE_SIZE = 2.0f       // taille du cercle (1 = le plus grand possible)
+        private val CIRCLE_SIZE = 1.0f       // taille du cercle (1 = le plus grand possible)
         private val PUPIL_SIZE = 0.17f       // taille de la pupille
         private val EYE_WIDTH = 0.22f        // largeur d'un oeil (part de l'ecran)
         private val EYE_RATIO = 1.25f        // hauteur / largeur de l'oeil
