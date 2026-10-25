@@ -37,7 +37,7 @@ class RobotWallpaperService : WallpaperService() {
 
         // ---------- Reglages ----------
         private val COLOR = Color.parseColor("#50C878")  // vert emeraude
-        private val BLINK_EVERY_MS = 5_000L  // clignement automatique
+        private val BLINK_EVERY_MS = 2_000L  // clignement automatique
         private val BLINK_MS = 200L          // duree d'un clignement
         private val NOTIF_MS = 4_000L        // duree du regard vers le haut
         private val TAP_LOOK_MS = 1_200L     // duree du regard apres une tape
