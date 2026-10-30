@@ -37,6 +37,7 @@ class RobotWallpaperService : WallpaperService() {
 
         // ---------- Reglages ----------
         private val COLOR = Color.parseColor("#50C878")  // vert emeraude
+        private val SPIDER_COLOR = Color.parseColor("#FF7518")  // orange halloween
         private val BLINK_EVERY_MS = 5_000L  // clignement toutes les 5 secondes
         private val BLINK_MS = 200L          // duree d'un clignement
         private val NOTIF_MS = 4_000L        // duree du regard vers le haut
@@ -47,6 +48,11 @@ class RobotWallpaperService : WallpaperService() {
         private val PUPIL_SIZE = 0.17f       // taille de la pupille
         private val EYE_WIDTH = 0.22f        // largeur d'un oeil (part de l'ecran)
         private val EYE_RATIO = 1.25f        // hauteur / largeur de l'oeil
+        private val WEB_SIZE = 0.30f         // taille de la toile (part de la largeur)
+        private val SPIDER_CYCLE_MS = 10_000L // duree d'un aller-retour de l'araignee
+        private val SPIDER_DROP = 0.18f      // descente max (part de la hauteur)
+        private val SWING_ANGLE = 0.40f      // amplitude du balancement (en radians)
+        private val SWING_PERIOD_MS = 2_400L // duree d'un aller-retour du balancement
         // --------------------------------
 
         private val handler = Handler(Looper.getMainLooper())
@@ -63,8 +69,19 @@ class RobotWallpaperService : WallpaperService() {
         private val pupilPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK }
         private val glintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
         private val cutPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK }
+        private val webPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(150, 255, 255, 255)
+            style = Paint.Style.STROKE
+        }
+        private val legPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = SPIDER_COLOR
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+        }
+        private val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = SPIDER_COLOR }
         private val rect = RectF()
         private val path = Path()
+        private val webPath = Path()
 
         private val drawRunner = object : Runnable {
             override fun run() {
@@ -116,6 +133,82 @@ class RobotWallpaperService : WallpaperService() {
             }
         }
 
+        // Toile d'araignee dans le coin en haut a gauche
+        private fun drawWeb(c: Canvas, w: Float) {
+            val len: Float = w * WEB_SIZE
+            val quarter: Float = PI_F / 2f
+            webPaint.strokeWidth = w * 0.003f
+
+            for (i in 0..4) {
+                val a: Float = quarter * i.toFloat() / 4f
+                c.drawLine(0f, 0f, cos(a) * len, sin(a) * len, webPaint)
+            }
+            for (j in 1..4) {
+                val r: Float = len * j.toFloat() / 4f
+                webPath.reset()
+                for (i in 0 until 4) {
+                    val a1: Float = quarter * i.toFloat() / 4f
+                    val a2: Float = quarter * (i + 1).toFloat() / 4f
+                    val am: Float = (a1 + a2) / 2f
+                    if (i == 0) webPath.moveTo(cos(a1) * r, sin(a1) * r)
+                    val cr: Float = r * 0.9f
+                    webPath.quadTo(cos(am) * cr, sin(am) * cr, cos(a2) * r, sin(a2) * r)
+                }
+                c.drawPath(webPath, webPaint)
+            }
+        }
+
+        // Petite araignee qui descend au bout de son fil en se balancant
+        private fun drawSpider(c: Canvas, w: Float, h: Float, now: Long) {
+            val t: Float = (now % SPIDER_CYCLE_MS).toFloat()
+            val f: Float = when {
+                t < 5000f -> smooth(t / 5000f)
+                t < 6500f -> 1f
+                else -> 1f - smooth((t - 6500f) / 3500f)
+            }
+            val b: Float = w * 0.020f
+
+            // Point d'attache du fil et longueur du fil
+            val ax: Float = w * 0.14f
+            val len: Float = h * 0.03f + h * SPIDER_DROP * f
+
+            // Balancement de gauche a droite (pendule)
+            val swingPhase: Float = (now % SWING_PERIOD_MS).toFloat() / SWING_PERIOD_MS.toFloat()
+            val swing: Float = SWING_ANGLE * sin(swingPhase * 2f * PI_F)
+            val sx: Float = ax + sin(swing) * len
+            val sy: Float = cos(swing) * len
+
+            // Fil
+            webPaint.strokeWidth = w * 0.0025f
+            c.drawLine(ax, 0f, sx, sy - b, webPaint)
+
+            // Pattes
+            legPaint.strokeWidth = w * 0.004f
+            val wiggleBase: Float = (now % 1000L).toFloat() / 1000f * 2f * PI_F * 8f
+            for (side in intArrayOf(-1, 1)) {
+                val sd: Float = side.toFloat()
+                for (i in 0..3) {
+                    val fi: Float = i.toFloat()
+                    val wig: Float = sin(wiggleBase + fi) * b * 0.25f
+                    val x0: Float = sx
+                    val y0: Float = sy + b * 0.3f
+                    val kx: Float = sx + sd * b * 1.8f
+                    val ky: Float = sy + (fi - 1.5f) * b * 0.9f - b * 0.8f
+                    val fx: Float = sx + sd * b * 2.8f
+                    val fy: Float = sy + (fi - 1.5f) * b * 1.3f + b * 1.2f + wig
+                    c.drawLine(x0, y0, kx, ky, legPaint)
+                    c.drawLine(kx, ky, fx, fy, legPaint)
+                }
+            }
+
+            // Corps : abdomen + tete
+            c.drawCircle(sx, sy, b, bodyPaint)
+            val hy: Float = sy + b * 1.15f
+            c.drawCircle(sx, hy, b * 0.62f, bodyPaint)
+            c.drawCircle(sx - b * 0.22f, hy + b * 0.1f, b * 0.14f, glintPaint)
+            c.drawCircle(sx + b * 0.22f, hy + b * 0.1f, b * 0.14f, glintPaint)
+        }
+
         private fun render(c: Canvas) {
             val w: Float = c.width.toFloat()
             val h: Float = c.height.toFloat()
@@ -125,6 +218,10 @@ class RobotWallpaperService : WallpaperService() {
             val dt: Float = (now - lastFrame).coerceIn(0L, 100L).toFloat()
             lastFrame = now
             val k: Float = 1f - exp(-dt / 120f)
+
+            // Decor d'Halloween
+            drawWeb(c, w)
+            drawSpider(c, w, h, now)
 
             if (RobotState.lastNotif != seenNotif) {
                 seenNotif = RobotState.lastNotif
@@ -148,7 +245,7 @@ class RobotWallpaperService : WallpaperService() {
             // Regard de base
             val phase: Float = (now % 100_000L).toFloat() / 2300f
             val drift: Float = sin(phase) * 0.08f
-            var tgx: Float = if (notifMode || wakeMode) 0f else drift
+            val tgx: Float = if (notifMode || wakeMode) 0f else drift
             var tgy: Float = if (notifMode) -0.85f else 0f
             if (wakeMode) tgy = -0.3f * surprise
             gazeX += (tgx - gazeX) * k
